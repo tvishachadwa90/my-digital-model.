@@ -1,0 +1,546 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anti-Sleep Monitor System</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #081426, #142d40);
+  color: white;
+  text-align: center;
+  padding: 24px 14px;
+}
+
+h1 { margin-bottom: 8px; color: #67e8f9; }
+.subtitle { color: #bdcede; margin-bottom: 24px; }
+
+.dashboard {
+  max-width: 1000px;
+  margin: auto;
+  background: #102338;
+  border: 1px solid #29465c;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 18px 45px #0005;
+}
+
+.scene {
+  position: relative;
+  background: #142b43;
+}
+
+svg {
+  width: 100%;
+  display: block;
+}
+
+.statusbar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px;
+  background: #0b1c2d;
+}
+
+.tag {
+  padding: 9px 15px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: bold;
+  background: #293d50;
+}
+
+.good { background: #14532d; color: #bbf7d0; }
+.bad { background: #7f1d1d; color: #fecaca; }
+.warning { background: #713f12; color: #fef08a; }
+
+.controls { padding: 20px; }
+
+button, select {
+  border: 0;
+  padding: 12px 16px;
+  margin: 5px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+button { cursor: pointer; }
+.openBtn { background: #22c55e; color: #052e16; }
+.closedBtn { background: #f59e0b; color: #422006; }
+.startBtn { background: #38bdf8; color: #082f49; }
+.resetBtn { background: #334155; color: white; }
+
+button:hover { filter: brightness(1.12); }
+
+.info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.info-card {
+  background: #192f44;
+  border: 1px solid #30485c;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.info-card small { color: #9fb5c8; }
+.info-card h3 { margin: 8px 0 0; }
+
+.note {
+  color: #a9bdcf;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 0 20px 20px;
+}
+
+.wheel { transform-box: fill-box; transform-origin: center; }
+.roadLine { animation: roadMove 1s linear infinite; }
+
+@keyframes roadMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100px); }
+}
+
+@keyframes wheelSpin {
+  to { transform: rotate(360deg); }
+}
+
+.moving .wheel { animation: wheelSpin 1s linear infinite; }
+.stopped .wheel, .stopped .roadLine {
+  animation-play-state: paused;
+}
+
+.lampGlow { filter: drop-shadow(0 0 9px #ffe7a3); }
+
+@media (max-width: 600px) {
+  h1 { font-size: 23px; }
+  button, select { width: 100%; margin: 5px 0; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>🚘 Anti-Sleep Monitor System</h1>
+<p class="subtitle">Driver alertness monitoring & simulated safety response</p>
+
+<div class="dashboard">
+
+<div class="scene" id="roadScene">
+<svg viewBox="0 0 900 440" role="img"
+     aria-label="Car on a tree-lined road with streetlights">
+
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#172554"/>
+    <stop offset="100%" stop-color="#60a5fa"/>
+  </linearGradient>
+  <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#475569"/>
+    <stop offset="100%" stop-color="#111827"/>
+  </linearGradient>
+  <linearGradient id="carPaint" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#38bdf8"/>
+    <stop offset="100%" stop-color="#0369a1"/>
+  </linearGradient>
+</defs>
+
+<!-- Evening sky -->
+<rect width="900" height="440" fill="url(#sky)"/>
+<circle cx="760" cy="65" r="28" fill="#fef3c7" opacity=".9"/>
+
+<!-- Distant city -->
+<g fill="#263e60" opacity=".8">
+  <rect x="20" y="170" width="55" height="95"/>
+  <rect x="82" y="195" width="60" height="70"/>
+  <rect x="700" y="175" width="65" height="90"/>
+  <rect x="770" y="145" width="45" height="120"/>
+  <rect x="820" y="195" width="60" height="70"/>
+</g>
+
+<!-- Grass -->
+<rect x="0" y="255" width="900" height="185" fill="#166534"/>
+
+<!-- Road -->
+<path d="M300 245 L600 245 L850 440 L50 440 Z" fill="url(#road)"/>
+
+<!-- Road edges -->
+<path d="M300 245 L50 440" stroke="#e2e8f0" stroke-width="5" opacity=".8"/>
+<path d="M600 245 L850 440" stroke="#e2e8f0" stroke-width="5" opacity=".8"/>
+
+<!-- Moving road markings -->
+<g class="roadLine" fill="#f8fafc">
+  <rect x="442" y="270" width="16" height="34" rx="4"/>
+  <rect x="438" y="330" width="24" height="48" rx="4"/>
+  <rect x="430" y="405" width="40" height="65" rx="4"/>
+</g>
+
+<!-- Trees on left -->
+<g>
+  <rect x="76" y="185" width="13" height="100" fill="#713f12"/>
+  <circle cx="82" cy="170" r="38" fill="#15803d"/>
+  <circle cx="55" cy="193" r="26" fill="#166534"/>
+  <circle cx="107" cy="194" r="28" fill="#22c55e"/>
+
+  <rect x="180" y="210" width="12" height="72" fill="#713f12"/>
+  <circle cx="186" cy="198" r="30" fill="#15803d"/>
+  <circle cx="164" cy="216" r="23" fill="#166534"/>
+  <circle cx="207" cy="217" r="24" fill="#22c55e"/>
+
+  <rect x="15" y="230" width="12" height="58" fill="#713f12"/>
+  <circle cx="21" cy="221" r="27" fill="#166534"/>
+</g>
+
+<!-- Trees on right -->
+<g>
+  <rect x="805" y="185" width="14" height="100" fill="#713f12"/>
+  <circle cx="812" cy="170" r="39" fill="#15803d"/>
+  <circle cx="785" cy="195" r="27" fill="#166534"/>
+  <circle cx="839" cy="195" r="28" fill="#22c55e"/>
+
+  <rect x="710" y="210" width="12" height="72" fill="#713f12"/>
+  <circle cx="716" cy="198" r="30" fill="#15803d"/>
+  <circle cx="694" cy="217" r="23" fill="#166534"/>
+  <circle cx="737" cy="217" r="24" fill="#22c55e"/>
+
+  <rect x="875" y="230" width="12" height="58" fill="#713f12"/>
+  <circle cx="881" cy="221" r="27" fill="#166534"/>
+</g>
+
+<!-- Streetlights -->
+<g stroke="#334155" stroke-width="6" fill="none" stroke-linecap="round">
+  <path d="M260 275 V170 Q260 155 276 155 H290"/>
+  <path d="M650 275 V170 Q650 155 634 155 H620"/>
+  <path d="M125 300 V225 Q125 215 137 215 H148"/>
+  <path d="M775 300 V225 Q775 215 763 215 H752"/>
+</g>
+<g class="lampGlow">
+  <circle cx="290" cy="158" r="13" fill="#fde68a"/>
+  <circle cx="620" cy="158" r="13" fill="#fde68a"/>
+  <circle cx="148" cy="218" r="10" fill="#fde68a"/>
+  <circle cx="752" cy="218" r="10" fill="#fde68a"/>
+</g>
+<g fill="#fde68a" opacity=".12">
+  <circle cx="290" cy="158" r="37"/>
+  <circle cx="620" cy="158" r="37"/>
+  <circle cx="148" cy="218" r="28"/>
+  <circle cx="752" cy="218" r="28"/>
+</g>
+
+<!-- Car shadow -->
+<ellipse cx="450" cy="365" rx="210" ry="28" fill="#020617" opacity=".5"/>
+
+<!-- Car body -->
+<g id="car">
+  <path d="M250 340 L275 294 Q292 270 335 264
+           L370 225 Q390 205 425 205 H495
+           Q530 205 550 230 L585 270
+           Q620 280 638 310 L650 345
+           L638 365 H260 Z"
+        fill="url(#carPaint)" stroke="#bae6fd" stroke-width="4"/>
+
+  <!-- Windshield -->
+  <path d="M355 263 L386 224 Q397 215 425 215
+           H489 Q513 215 530 240 L549 263 Z"
+        fill="#bae6fd" stroke="#e0f2fe" stroke-width="4"/>
+
+  <!-- Windshield division -->
+  <path d="M450 216 V263" stroke="#64748b" stroke-width="4"/>
+
+  <!-- Driver -->
+  <g id="driver">
+    <path d="M385 260 Q387 238 408 235
+             Q428 237 431 260 Z" fill="#0f766e"/>
+    <circle cx="408" cy="232" r="21" fill="#d6a77a"/>
+    <path d="M387 231 Q386 207 408 209
+             Q429 210 430 231 L423 222
+             Q405 215 391 229 Z" fill="#334155"/>
+
+    <!-- Glasses -->
+    <g stroke="#111827" stroke-width="3" fill="none">
+      <rect x="391" y="226" width="14" height="10" rx="3"/>
+      <rect x="411" y="226" width="14" height="10" rx="3"/>
+      <path d="M405 230 H411"/>
+    </g>
+    <g id="eyesOpen" fill="#111827">
+      <ellipse cx="398" cy="231" rx="2" ry="3"/>
+      <ellipse cx="418" cy="231" rx="2" ry="3"/>
+    </g>
+    <g id="eyesClosed" stroke="#111827" stroke-width="2.5"
+       stroke-linecap="round" display="none">
+      <path d="M394 231 Q398 235 402 231"/>
+      <path d="M414 231 Q418 235 422 231"/>
+    </g>
+
+    <!-- Shoulders -->
+    <path d="M373 263 Q375 244 394 247
+             L408 260 L423 247 Q442 245 448 263 Z"
+          fill="#0f766e"/>
+  </g>
+
+  <!-- Front bumper and headlights -->
+  <path d="M267 326 Q450 345 633 326 L645 348
+           Q450 376 255 348 Z"
+        fill="#075985" stroke="#7dd3fc" stroke-width="3"/>
+  <path d="M270 316 L305 320 L297 335 L263 331 Z" fill="#fef3c7"/>
+  <path d="M595 320 L630 316 L637 331 L603 335 Z" fill="#fef3c7"/>
+
+  <!-- Wheels -->
+  <g class="wheel">
+    <circle cx="315" cy="350" r="34" fill="#020617" stroke="#94a3b8" stroke-width="5"/>
+    <circle cx="315" cy="350" r="17" fill="#64748b" stroke="#cbd5e1" stroke-width="4"/>
+    <path d="M315 334 V366 M299 350 H331 M304 339 L326 361 M326 339 L304 361"
+          stroke="#e2e8f0" stroke-width="3"/>
+  </g>
+  <g class="wheel">
+    <circle cx="585" cy="350" r="34" fill="#020617" stroke="#94a3b8" stroke-width="5"/>
+    <circle cx="585" cy="350" r="17" fill="#64748b" stroke="#cbd5e1" stroke-width="4"/>
+    <path d="M585 334 V366 M569 350 H601 M574 339 L596 361 M596 339 L574 361"
+          stroke="#e2e8f0" stroke-width="3"/>
+  </g>
+
+  <!-- Brake indicator -->
+  <g id="brakeLight" opacity=".45">
+    <rect x="273" y="337" width="27" height="9" rx="3" fill="#ef4444"/>
+    <rect x="600" y="337" width="27" height="9" rx="3" fill="#ef4444"/>
+  </g>
+</g>
+
+<!-- Roadside label -->
+<text x="22" y="35" fill="#e0f2fe" font-size="18" font-weight="bold">
+  SMART DRIVER SAFETY
+</text>
+<text x="22" y="57" fill="#cbd5e1" font-size="12">
+  LIVE SIMULATION
+</text>
+
+</svg>
+</div>
+
+<div class="statusbar">
+  <span id="eyeTag" class="tag good">👁 Eyes: Open</span>
+  <span id="systemTag" class="tag">System: Standby</span>
+  <span id="alarmTag" class="tag">🔔 Alarm: OFF</span>
+  <span id="brakeTag" class="tag">🛑 Braking: Not active</span>
+</div>
+
+<div class="controls">
+  <h2>System Controls</h2>
+
+  <button class="openBtn" onclick="setEyes(true)">👁 Eyes Open</button>
+  <button class="closedBtn" onclick="setEyes(false)">😴 Eyes Closed</button>
+  <button class="startBtn" onclick="startMonitoring()">▶ Start Monitoring</button>
+  <button class="resetBtn" onclick="resetSystem()">↻ Reset</button>
+
+  <p>
+    Alert delay:
+    <select id="delay">
+      <option value="2000">2 seconds</option>
+      <option value="3000">3 seconds</option>
+      <option value="5000">5 seconds</option>
+    </select>
+  </p>
+</div>
+
+<div class="info">
+  <div class="info-card">
+    <small>Eye Status</small>
+    <h3 id="eyeValue">Open</h3>
+  </div>
+  <div class="info-card">
+    <small>Time Eyes Closed</small>
+    <h3 id="timerValue">0.0 s</h3>
+  </div>
+  <div class="info-card">
+    <small>Alarm Status</small>
+    <h3 id="alarmValue">OFF</h3>
+  </div>
+  <div class="info-card">
+    <small>Vehicle Status</small>
+    <h3 id="vehicleValue">Moving</h3>
+  </div>
+</div>
+
+<p class="note" id="message">
+  Press Start Monitoring, then select Eyes Closed to test the system.
+</p>
+
+</div>
+
+<p class="note">
+  Educational simulation only. The eye status is controlled manually.
+  The alarm and braking are simulated; this page does not control a real vehicle.
+</p>
+
+<script>
+let eyesOpen = true;
+let monitoring = false;
+let alarmActive = false;
+let closedStart = null;
+let timerLoop = null;
+
+const scene = document.getElementById("roadScene");
+
+function setEyes(open) {
+  eyesOpen = open;
+
+  document.getElementById("eyesOpen").style.display =
+    open ? "inline" : "none";
+
+  document.getElementById("eyesClosed").style.display =
+    open ? "none" : "inline";
+
+  document.getElementById("eyeTag").textContent =
+    open ? "👁 Eyes: Open" : "😴 Eyes: Closed";
+
+  document.getElementById("eyeTag").className =
+    open ? "tag good" : "tag bad";
+
+  document.getElementById("eyeValue").textContent =
+    open ? "Open" : "Closed";
+
+  if (open) {
+    closedStart = null;
+    alarmActive = false;
+    updateAlarm(false);
+    document.getElementById("timerValue").textContent = "0.0 s";
+    document.getElementById("message").textContent =
+      "Eyes are open. The driver is alert.";
+    scene.classList.remove("stopped");
+    scene.classList.add("moving");
+  } else {
+    if (monitoring && !alarmActive) {
+      closedStart = Date.now();
+      document.getElementById("message").textContent =
+        "Eyes closed detected. Waiting for the alert delay...";
+    } else if (!monitoring) {
+      document.getElementById("message").textContent =
+        "Eyes closed. Press Start Monitoring to begin the test.";
+    }
+  }
+
+  updateSystem();
+}
+
+function startMonitoring() {
+  monitoring = true;
+
+  if (!eyesOpen && !alarmActive) {
+    closedStart = Date.now();
+  }
+
+  document.getElementById("systemTag").textContent =
+    "System: Monitoring";
+  document.getElementById("systemTag").className = "tag good";
+
+  document.getElementById("message").textContent =
+    eyesOpen
+      ? "Monitoring started. Select Eyes Closed to test the alert."
+      : "Eyes closed detected. Monitoring the duration.";
+
+  updateSystem();
+}
+
+function updateAlarm(active) {
+  alarmActive = active;
+
+  document.getElementById("alarmTag").textContent =
+    active ? "🔔 Alarm: ON" : "🔔 Alarm: OFF";
+
+  document.getElementById("alarmTag").className =
+    active ? "tag bad" : "tag";
+
+  document.getElementById("alarmValue").textContent =
+    active ? "ON" : "OFF";
+
+  document.getElementById("brakeTag").textContent =
+    active ? "🛑 Braking: Simulated" : "🛑 Braking: Not active";
+
+  document.getElementById("brakeTag").className =
+    active ? "tag warning" : "tag";
+
+  document.getElementById("vehicleValue").textContent =
+    active ? "Stopped (simulated)" : "Moving";
+
+  document.getElementById("brakeLight").setAttribute(
+    "opacity", active ? "1" : ".45"
+  );
+
+  if (active) {
+    scene.classList.remove("moving");
+    scene.classList.add("stopped");
+    document.getElementById("message").textContent =
+      "⚠ ALERT! Eyes stayed closed. Alarm activated and braking is simulated.";
+  } else {
+    scene.classList.remove("stopped");
+    scene.classList.add("moving");
+  }
+}
+
+function updateSystem() {
+  if (!monitoring) {
+    document.getElementById("systemTag").textContent =
+      "System: Standby";
+    document.getElementById("systemTag").className = "tag";
+  } else {
+    document.getElementById("systemTag").textContent =
+      "System: Monitoring";
+    document.getElementById("systemTag").className = "tag good";
+  }
+}
+
+function checkSystem() {
+  if (monitoring && !eyesOpen && closedStart !== null) {
+    const elapsed = (Date.now() - closedStart) / 1000;
+    document.getElementById("timerValue").textContent =
+      elapsed.toFixed(1) + " s";
+
+    const delay = Number(document.getElementById("delay").value) / 1000;
+
+    if (elapsed >= delay && !alarmActive) {
+      updateAlarm(true);
+    }
+  } else {
+    document.getElementById("timerValue").textContent = "0.0 s";
+  }
+}
+
+function resetSystem() {
+  eyesOpen = true;
+  monitoring = false;
+  alarmActive = false;
+  closedStart = null;
+
+  document.getElementById("eyesOpen").style.display = "inline";
+  document.getElementById("eyesClosed").style.display = "none";
+
+  document.getElementById("eyeTag").textContent = "👁 Eyes: Open";
+  document.getElementById("eyeTag").className = "tag good";
+  document.getElementById("eyeValue").textContent = "Open";
+  document.getElementById("timerValue").textContent = "0.0 s";
+
+  updateAlarm(false);
+  updateSystem();
+
+  document.getElementById("message").textContent =
+    "System reset. Press Start Monitoring to begin again.";
+}
+
+timerLoop = setInterval(checkSystem, 100);
+scene.classList.add("moving");
+</script>
+
+</body>
+</html>
